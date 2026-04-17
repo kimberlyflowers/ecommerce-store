@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.env
+.env.local
+data/marketplace.db
+data/marketplace.db-wal
+data/marketplace.db-shm
+data/images/
