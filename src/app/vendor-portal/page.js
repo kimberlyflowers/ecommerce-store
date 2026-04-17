@@ -1,94 +1,96 @@
 'use client';
+import { useState } from 'react';
 
 export default function VendorPortal() {
+  const [mode, setMode] = useState('login');
+  const [form, setForm] = useState({ business_name: '', email: '', password: '', description: '', website: '' });
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    setError('');
+    const r = await fetch('/api/vendors/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: form.email, password: form.password }),
+    });
+    const data = await r.json();
+    if (!r.ok) return setError(data.error);
+
+    localStorage.setItem('vendor_token', data.token);
+    localStorage.setItem('vendor_data', JSON.stringify(data.vendor));
+    window.location.href = '/vendor-portal/dashboard';
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    setError('');
+    const r = await fetch('/api/vendors/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    });
+    const data = await r.json();
+    if (!r.ok) return setError(data.error);
+
+    setSuccess(`Registration successful! Your API key is: ${data.vendor.api_key} — Save this! Your account is pending approval.`);
+    localStorage.setItem('vendor_token', data.token);
+    localStorage.setItem('vendor_data', JSON.stringify(data.vendor));
+  }
+
   return (
     <main className="vendor-page">
       <h1>Vendor Portal</h1>
-      <p style={{ textAlign: 'center', color: 'var(--text-light)', marginBottom: '3rem', lineHeight: 1.8 }}>
-        Join our curated marketplace and reach thousands of engaged couples.
-        Register for an account and start uploading your catalog via our API.
+      <p style={{ textAlign: 'center', color: 'var(--text-light)', marginBottom: '2rem' }}>
+        {mode === 'login' ? 'Log in to manage your products' : 'Register to start selling your rings'}
       </p>
 
-      <div className="api-docs">
-        <h3>Getting Started</h3>
-        <ol style={{ lineHeight: 2.2, paddingLeft: '1.5rem' }}>
-          <li>Register for a vendor account</li>
-          <li>Wait for admin approval</li>
-          <li>Use your API key to upload products</li>
-          <li>Products go live after review</li>
-        </ol>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
+        <button className={mode === 'login' ? 'btn btn-primary' : 'btn btn-outline'} style={{ padding: '0.6rem 2rem' }} onClick={() => setMode('login')}>Login</button>
+        <button className={mode === 'register' ? 'btn btn-primary' : 'btn btn-outline'} style={{ padding: '0.6rem 2rem' }} onClick={() => setMode('register')}>Register</button>
       </div>
 
-      <div className="api-docs">
-        <h3>API Documentation</h3>
-        <p style={{ marginBottom: '1rem' }}>Base URL: <code>https://your-domain.com/api</code></p>
+      {error && <div style={{ background: '#fdeaea', color: '#c0392b', padding: '1rem', marginBottom: '1.5rem', fontSize: '0.85rem' }}>{error}</div>}
+      {success && <div style={{ background: '#eafde8', color: '#2d7d46', padding: '1rem', marginBottom: '1.5rem', fontSize: '0.85rem', wordBreak: 'break-all' }}>{success}</div>}
 
-        <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', fontWeight: 600, marginTop: '1.5rem' }}>1. Register</h4>
-        <pre>{`POST /api/vendors/register
-Content-Type: application/json
-
-{
-  "business_name": "Your Jewelry Co",
-  "email": "you@example.com",
-  "password": "secure_password",
-  "description": "Handcrafted rings since 1990",
-  "website": "https://yoursite.com"
-}`}</pre>
-
-        <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', fontWeight: 600, marginTop: '1.5rem' }}>2. Upload a Product</h4>
-        <pre>{`POST /api/vendors/products
-x-api-key: rk_your_api_key_here
-Content-Type: application/json
-
-{
-  "name": "Classic Solitaire Diamond Ring",
-  "description": "A timeless 1ct round brilliant...",
-  "price": 4999.99,
-  "category_id": "cat_solitaire",
-  "metal_type": "White Gold",
-  "stone_type": "Diamond",
-  "carat_weight": 1.0,
-  "ring_sizes": [5, 5.5, 6, 6.5, 7, 7.5, 8],
-  "images": ["https://example.com/ring1.jpg"],
-  "sku": "SOL-WG-1CT",
-  "inventory_count": 10
-}`}</pre>
-
-        <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', fontWeight: 600, marginTop: '1.5rem' }}>3. Bulk Catalog Upload</h4>
-        <pre>{`POST /api/vendors/catalogs
-x-api-key: rk_your_api_key_here
-Content-Type: application/json
-
-{
-  "products": [
-    { "name": "Ring 1", "price": 2999.99, ... },
-    { "name": "Ring 2", "price": 5499.99, ... }
-  ]
-}`}</pre>
-
-        <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', fontWeight: 600, marginTop: '1.5rem' }}>4. List Your Products</h4>
-        <pre>{`GET /api/vendors/products
-x-api-key: rk_your_api_key_here`}</pre>
-
-        <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', fontWeight: 600, marginTop: '1.5rem' }}>Categories</h4>
-        <pre>{`cat_solitaire  - Solitaire
-cat_halo       - Halo
-cat_vintage    - Vintage
-cat_three_stone - Three Stone
-cat_pave       - Pavé
-cat_cluster    - Cluster
-cat_custom     - Custom`}</pre>
-
-        <h4 style={{ fontFamily: 'var(--font-sans)', fontSize: '0.9rem', fontWeight: 600, marginTop: '1.5rem' }}>Authentication</h4>
-        <p>Include your API key in the <code>x-api-key</code> header, or use a Bearer token from login:</p>
-        <pre>{`Authorization: Bearer your_jwt_token`}</pre>
-      </div>
-
-      <div style={{ textAlign: 'center', marginTop: '3rem' }}>
-        <p style={{ color: 'var(--text-light)', fontSize: '0.85rem' }}>
-          Questions? Contact us at <strong>vendors@ringmarketplace.com</strong>
-        </p>
-      </div>
+      {mode === 'login' ? (
+        <form onSubmit={handleLogin}>
+          <div className="form-group">
+            <label>Email</label>
+            <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <input type="password" required value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+          </div>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Login</button>
+        </form>
+      ) : (
+        <form onSubmit={handleRegister}>
+          <div className="form-group">
+            <label>Business Name</label>
+            <input type="text" required value={form.business_name} onChange={e => setForm(f => ({ ...f, business_name: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label>Email</label>
+            <input type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label>Password</label>
+            <input type="password" required value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <textarea rows={3} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Tell us about your jewelry business..." />
+          </div>
+          <div className="form-group">
+            <label>Website (optional)</label>
+            <input type="url" value={form.website} onChange={e => setForm(f => ({ ...f, website: e.target.value }))} placeholder="https://..." />
+          </div>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Register</button>
+        </form>
+      )}
     </main>
   );
 }
